@@ -18,42 +18,35 @@
 
     Bonus: implement this use case with decorators.
 '''
+from functools import wraps
 import redis
 import requests
-from functools import wraps
 from typing import Callable
 
-redis_store = redis.Redis()
+redis_ = redis.Redis()
 
 
-def url_access_count(method):
-    """Decorator for get_page function"""
+def count_requests(method: Callable) -> Callable:
+    """ Decortator for counting """
     @wraps(method)
     def wrapper(url):
-        """Wrapper function"""
-        key = "cached:" + url
-        cached_value = redis_store.get(key)
+        cached_key = "cached:" + url
+        cached_data = redis_.get(cached_key)
+        if cached_data:
+            return cached_data.decode("utf-8")
 
-        if cached_value:
-            return cached_value.decode("utf-8")
+        count_key = "count:" + url
+        html = method(url)
 
-        # Get new content and update cache
-        key_count = "count:" + url
-        html_content = method(url)
-
-        redis_store.incr(key_count)
-        redis_store.set(key, html_content, ex=10)
-        redis_store.expire(key, 10)
-
-        return html_content
+        redis_.incr(count_key)
+        redis_.set(cached_key, html)
+        redis_.expire(cached_key, 10)
+        return html
     return wrapper
 
 
-@url_access_count
+@count_requests
 def get_page(url: str) -> str:
-    """Obtain the HTML content of a particular URL"""
-    results = requests.get(url)
-    return results.text
-
-if __name__ == "__main__":
-    get_page('http://slowwly.robertomurray.co.uk')
+    """ Obtain the HTML content of a  URL """
+    req = requests.get(url)
+    return req.text
