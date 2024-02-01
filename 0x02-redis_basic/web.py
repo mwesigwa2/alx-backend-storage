@@ -26,16 +26,16 @@ from typing import Callable
 redis_store = redis.Redis()
 
 
-def url_access_count(method: Callable) -> Callable:
+def url_access_count(method):
     """Decorator for get_page function"""
     @wraps(method)
-    def wrapper(url: str) -> str:
+    def wrapper(url):
         """Wrapper function"""
         key = "cached:" + url
         cached_value = redis_store.get(key)
 
         if cached_value:
-            return cached_value.decode("utf-8") if cached_value else ""
+            return cached_value.decode("utf-8")
 
         # Get new content and update cache
         key_count = "count:" + url
@@ -54,3 +54,6 @@ def get_page(url: str) -> str:
     """Obtain the HTML content of a particular URL"""
     results = requests.get(url)
     return results.text
+
+if __name__ == "__main__":
+    get_page('http://slowwly.robertomurray.co.uk')
